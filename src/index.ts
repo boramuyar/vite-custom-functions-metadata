@@ -73,38 +73,60 @@ function customFunctionsMetadataPlugin(options: CustomFunctionsPluginOptions): P
     },
 
     async writeBundle() {
-      // Write the metadata JSON file during the bundle phase (for production builds)
+      // Write the metadata JSON file and functions.js during the bundle phase (for production builds)
       if (generateResult && !generateResult.errors.length) {
-        const outputPath = path.resolve(config.build.outDir, options.output);
+        const outputDir = config.build.outDir;
+        const metadataOutputPath = path.resolve(outputDir, options.output);
+        const functionsOutputPath = path.resolve(outputDir, "functions.js");
+
         try {
           // Ensure the directory exists
-          await fs.mkdir(path.dirname(outputPath), { recursive: true });
+          await fs.mkdir(path.dirname(metadataOutputPath), { recursive: true });
+
           // Write the metadata file
-          await fs.writeFile(outputPath, generateResult.metadataJson);
+          await fs.writeFile(metadataOutputPath, generateResult.metadataJson);
+
+          // Generate and write the functions.js file
+          const functionContent = generateFunctionsFileContent(generateResult.associate);
+          await fs.writeFile(functionsOutputPath, functionContent);
         } catch (error) {
-          this.error(`Failed to write metadata file: ${(error as Error).message}`);
+          this.error(`Failed to write output files: ${(error as Error).message}`);
         }
       }
     },
 
     configureServer(server) {
-      // For development mode: ensure metadata file is created when dev server starts
+      // For development mode: ensure metadata file and functions.js are created when dev server starts
       return () => {
         server.middlewares.use(async (req, res, next) => {
-          // Only do this once when server starts
-          if (generateResult && !generateResult.errors.length && req.url?.endsWith(options.output)) {
-            const outputPath = path.resolve(server.config.root, options.output);
-            try {
-              // Ensure the directory exists
-              await fs.mkdir(path.dirname(outputPath), { recursive: true });
-              // Write the metadata file
-              await fs.writeFile(outputPath, generateResult.metadataJson);
-              // Serve the file directly
-              res.setHeader("Content-Type", "application/json");
-              res.end(generateResult.metadataJson);
-              return;
-            } catch (error) {
-              console.error(`Failed to write metadata file: ${(error as Error).message}`);
+          if (generateResult && !generateResult.errors.length) {
+            if (req.url?.endsWith(options.output)) {
+              const outputPath = path.resolve(server.config.root, options.output);
+              try {
+                // Ensure the directory exists
+                await fs.mkdir(path.dirname(outputPath), { recursive: true });
+                // Write the metadata file
+                await fs.writeFile(outputPath, generateResult.metadataJson);
+                // Serve the file directly
+                res.setHeader("Content-Type", "application/json");
+                res.end(generateResult.metadataJson);
+                return;
+              } catch (error) {
+                console.error(`Failed to write metadata file: ${(error as Error).message}`);
+              }
+            } else if (req.url?.endsWith("functions.js")) {
+              const functionsPath = path.resolve(server.config.root, "functions.js");
+              try {
+                // Generate and write the functions.js file
+                const functionContent = generateFunctionsFileContent(generateResult.associate);
+                await fs.writeFile(functionsPath, functionContent);
+                // Serve the file directly
+                res.setHeader("Content-Type", "application/javascript");
+                res.end(functionContent);
+                return;
+              } catch (error) {
+                console.error(`Failed to write functions file: ${(error as Error).message}`);
+              }
             }
           }
           next();
@@ -116,3 +138,22 @@ function customFunctionsMetadataPlugin(options: CustomFunctionsPluginOptions): P
 
 export { customFunctionsMetadataPlugin };
 export default customFunctionsMetadataPlugin;
+
+function generateFunctionsFileContent(associations: IAssociate[]): string {
+  const imports = new Set<string>();
+  const functionExports = new Set<string>();
+
+  associations.forEach((item) => {
+    // Add import statement for each unique source file
+    const relativePath = `./${path.basename(item.sourceFileName, ".ts")}`;
+    imports.add(`import { ${item.functionName} } from '${relativePath}';`);
+    functionExports.add(item.functionName);
+  });
+
+  return `${Array.from(imports).join("\n")}
+
+export {
+  ${Array.from(functionExports).join(",\n  ")}
+};
+`;
+}
