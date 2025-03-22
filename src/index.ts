@@ -12,7 +12,7 @@ class CustomFunctionsMetadataPlugin {
   public static generateResults: Record<string, IGenerateResult> = {};
 }
 
-export default function customFunctionsMetadataPlugin(options: CustomFunctionsPluginOptions): Plugin {
+function customFunctionsMetadataPlugin(options: CustomFunctionsPluginOptions): Plugin {
   let config: ResolvedConfig;
   let resolvedInputFiles: string[] = [];
   let generateResult: IGenerateResult;
@@ -113,3 +113,6 @@ export default function customFunctionsMetadataPlugin(options: CustomFunctionsPl
     },
   };
 }
+
+export { customFunctionsMetadataPlugin };
+export default customFunctionsMetadataPlugin;

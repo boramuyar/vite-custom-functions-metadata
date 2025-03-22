@@ -1,15 +1,15 @@
-# vite-plugin-custom-functions-metadata
+# vite-custom-functions-metadata
 
 A Vite plugin for generating and injecting Custom Functions metadata for Office Add-ins.
 
 ## Installation
 
 ```bash
-npm install --save-dev vite-plugin-custom-functions-metadata
+npm install --save-dev vite-custom-functions-metadata
 # or
-yarn add -D vite-plugin-custom-functions-metadata
+yarn add -D vite-custom-functions-metadata
 # or
-pnpm add -D vite-plugin-custom-functions-metadata
+pnpm add -D vite-custom-functions-metadata
 ```
 
 ## Usage
@@ -18,7 +18,7 @@ Add the plugin to your `vite.config.ts`:
 
 ```typescript
 import { defineConfig } from "vite";
-import customFunctionsMetadataPlugin from "vite-plugin-custom-functions-metadata";
+import customFunctionsMetadataPlugin from "vite-custom-functions-metadata";
 
 export default defineConfig({
   plugins: [
